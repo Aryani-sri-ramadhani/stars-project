@@ -1,7 +1,8 @@
 ---
-judul: Tentang memulai lagi, berkali-kali
-tag: Pelajaran
-tanggal: 2026-05-10
+layout: post
+title: "memulai lagi"
+date: 2026-05-17
+categories: story
 ---
 
 Orang sering bertanya bagaimana saya tetap bertahan. Jawaban saya selalu sama: saya tidak bertahan, saya hanya memulai lagi — berkali-kali.
