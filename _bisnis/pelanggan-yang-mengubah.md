@@ -1,6 +1,6 @@
 ---
-judul: Pelanggan yang mengubah cara saya melihat usaha
-tag: Cerita Bisnis
+judul: "Pelanggan yang mengubah cara saya melihat usaha"
+tag: "Cerita Bisnis"
 tanggal: 2026-05-14
 ---
 

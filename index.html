@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: null
 ---
 
 <!DOCTYPE html>
@@ -364,7 +364,7 @@ layout: default
               @ayamgeprekpetukangan
             </a>
           </div>
-          <button class="btn btn-secondary" data-wa="ayam">Pesan Ayam Geprek</button>
+          <button class="btn btn-secondary" data-wa="coffee">Pesan Blind Coffee</button>
         </div>
       </article>
       
@@ -550,38 +550,7 @@ layout: default
   </svg>
 </button>
 
-<!-- Floating: Chatbot -->
-<button class="chatbot-toggle" id="chatbotToggle" aria-label="Buka asisten" aria-expanded="false">
-  <span aria-hidden="true">✦</span>
-</button>
 
-<div class="chatbot-panel" id="chatbotPanel" role="dialog" aria-label="Asisten Kak Yani">
-  <div class="chatbot-header">
-    <div class="chatbot-avatar" aria-hidden="true">Y</div>
-    <div class="chatbot-header-info">
-      <h4>Asisten Kak Yani</h4>
-      <p>Tanya layanan &amp; usaha</p>
-    </div>
-    <button class="chatbot-close" id="chatbotClose" aria-label="Tutup">×</button>
-  </div>
-  <div class="chatbot-messages" id="chatbotMessages" role="log" aria-live="polite">
-    <div class="chat-msg bot">Halo! 👋 Saya asisten virtual Kak Yani. Tanyakan apa saja tentang layanan speaker, pelatihan, coffee catering, atau usaha Kak Yani.</div>
-  </div>
-  <div class="chatbot-suggestions">
-    <button class="chatbot-suggestion" data-q="Bagaimana cara mengundang Kak Yani sebagai narasumber?">Undang narasumber</button>
-    <button class="chatbot-suggestion" data-q="Bagaimana program pelatihan CSR?">Program CSR</button>
-    <button class="chatbot-suggestion" data-q="Cara pesan coffee catering?">Coffee catering</button>
-  </div>
-  <div class="chatbot-input-area">
-    <label for="chatInput" class="sr-only">Pertanyaan Anda</label>
-    <input type="text" id="chatInput" placeholder="Ketik pertanyaan...">
-    <button class="chatbot-send" id="chatSend" aria-label="Kirim">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true">
-        <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-      </svg>
-    </button>
-  </div>
-</div>
 
 <!-- Floating: Accessibility -->
 <button class="a11y-toggle" id="a11yToggle" aria-label="Aksesibilitas" aria-expanded="false">
@@ -622,38 +591,7 @@ layout: default
   <button class="a11y-reset" id="a11yReset">Reset Pengaturan</button>
 </div>
 
-<!-- Editor Modal -->
-<div class="modal-overlay" id="editorModal" role="dialog" aria-labelledby="editorTitle" aria-modal="true">
-  <div class="modal">
-    <button class="modal-close" id="editorClose" aria-label="Tutup">×</button>
-    <h3 id="editorTitle">Tulis Catatan Baru</h3>
-    <form class="modal-form" id="entryForm" novalidate>
-      <input type="hidden" id="entryId">
-      <input type="hidden" id="entryType">
-      <div class="form-group">
-        <label for="entryTitle">Judul *</label>
-        <input type="text" id="entryTitle" required maxlength="200">
-      </div>
-      <div class="form-group">
-        <label for="entryTag">Tag</label>
-        <input type="text" id="entryTag" placeholder="Refleksi, Pelajaran, Pengalaman..." maxlength="50">
-      </div>
-      <div class="form-group">
-        <label for="entryContent">Isi *</label>
-        <div class="ai-bar" role="toolbar">
-          <button type="button" class="ai-btn" data-ai="prompt">Beri saya prompt</button>
-          <button type="button" class="ai-btn" data-ai="improve">Perbaiki tulisan</button>
-          <button type="button" class="ai-btn" data-ai="continue">Lanjutkan</button>
-        </div>
-        <textarea id="entryContent" required rows="12" placeholder="Tulis dengan tenang. Tidak perlu sempurna — cukup jujur."></textarea>
-      </div>
-      <div class="form-actions">
-        <button type="button" class="btn btn-secondary" id="entryCancel">Batal</button>
-        <button type="submit" class="btn btn-primary">Simpan</button>
-      </div>
-    </form>
-  </div>
-</div>
+
 
 <!-- Read Modal -->
 <div class="modal-overlay" id="readModal" role="dialog" aria-labelledby="readTitle" aria-modal="true">
@@ -663,8 +601,6 @@ layout: default
     <h3 id="readTitle"></h3>
     <div class="read-modal-actions">
       <button id="readSummary">✦ Ringkas dengan AI</button>
-      <button id="readEdit">Edit</button>
-      <button id="readDelete" class="danger">Hapus</button>
     </div>
     <div id="readSummaryBox"></div>
     <div class="read-modal-content" id="readContent"></div>
@@ -673,8 +609,31 @@ layout: default
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<!-- Library Markdown (untuk membaca file .md) -->
-<script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+<!-- Data artikel dari Jekyll Collections -->
+<script>
+const ARTIKEL_DATA = {
+  story: [
+    {% for post in site.my-story %}
+    {
+      judul: {{ post.judul | jsonify }},
+      tag: {{ post.tag | default: "" | jsonify }},
+      tanggal: "{{ post.tanggal | date: '%Y-%m-%d' }}",
+      isi: {{ post.content | jsonify }}
+    }{% unless forloop.last %},{% endunless %}
+    {% endfor %}
+  ],
+  biz: [
+    {% for post in site.bisnis %}
+    {
+      judul: {{ post.judul | jsonify }},
+      tag: {{ post.tag | default: "" | jsonify }},
+      tanggal: "{{ post.tanggal | date: '%Y-%m-%d' }}",
+      isi: {{ post.content | jsonify }}
+    }{% unless forloop.last %},{% endunless %}
+    {% endfor %}
+  ]
+};
+</script>
 <script src="js/main.js"></script>
 
 </body>

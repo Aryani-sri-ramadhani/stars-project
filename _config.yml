@@ -1,0 +1,40 @@
+# ============================================
+# Jekyll Configuration — Website Kak Yani
+# ============================================
+# Site dibangun otomatis oleh GitHub Pages.
+# Tidak perlu build manual — cukup push ke GitHub.
+
+title: "Kak Yani — Aryani Sri Ramadhani"
+description: "Culinary Entrepreneur, Narasumber, dan Pelatih Pemberdayaan"
+url: "https://kakyani.my.id"
+baseurl: ""
+
+# Koleksi artikel
+# Jekyll otomatis membaca semua file .md di folder _my-story/ dan _bisnis/
+collections:
+  my-story:
+    output: false    # Tidak buat halaman terpisah per artikel
+  bisnis:
+    output: false
+
+# Default — koleksi tidak perlu layout
+defaults:
+  - scope:
+      path: ""
+      type: "my-story"
+    values:
+      layout: null
+  - scope:
+      path: ""
+      type: "bisnis"
+    values:
+      layout: null
+
+# Build
+markdown: kramdown
+
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - node_modules

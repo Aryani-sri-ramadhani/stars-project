@@ -1,8 +1,7 @@
 ---
-layout: post
-title: "Pagi yang tidak terburu-buru"
-date: 2026-05-17
-categories: story
+judul: "Pagi yang tidak terburu-buru"
+tag: "Refleksi"
+tanggal: 2026-05-17
 ---
 
 Hari ini saya bangun lebih awal. Ada sesuatu tentang aroma kopi yang baru diseduh — perlahan, jujur, tanpa perlu pamer.

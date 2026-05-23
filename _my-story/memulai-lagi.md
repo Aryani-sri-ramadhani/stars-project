@@ -1,8 +1,7 @@
 ---
-layout: post
-title: "memulai lagi"
-date: 2026-05-17
-categories: story
+judul: "Memulai lagi"
+tag: "Refleksi"
+tanggal: 2026-05-17
 ---
 
 Orang sering bertanya bagaimana saya tetap bertahan. Jawaban saya selalu sama: saya tidak bertahan, saya hanya memulai lagi — berkali-kali.

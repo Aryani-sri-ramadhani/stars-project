@@ -1,6 +1,6 @@
 ---
-judul: Kenapa saya memilih melatih, bukan sekadar menjual
-tag: Filosofi
+judul: "Kenapa saya memilih melatih, bukan sekadar menjual"
+tag: "Filosofi"
 tanggal: 2026-05-08
 ---
 

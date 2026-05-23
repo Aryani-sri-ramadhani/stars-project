@@ -30,7 +30,6 @@ const WA = {
     speaker: 'Halo Kak Yani, saya tertarik mengundang Kak Yani sebagai narasumber.\n\nNama: \nLembaga/Perusahaan: \nAcara: \nTanggal & Lokasi: \nTopik yang diinginkan: \n\nMohon informasi lebih lanjut. Terima kasih.',
     training: 'Halo Kak Yani, saya tertarik mendiskusikan program pelatihan.\n\nNama: \nLembaga/Perusahaan: \nJabatan: \nTarget peserta: \nTujuan program: \n\nMohon kita atur waktu untuk konsultasi. Terima kasih.',
     catering: 'Halo Kak Yani, saya ingin memesan coffee catering.\n\nNama: \nAcara: \nTanggal & Lokasi: \nJumlah peserta: \n\nMohon penawarannya. Terima kasih.',
-    ayam: 'Halo Kak Yani, saya ingin memesan dari Ayam Geprek Petukangan.\n\nNama: \nMenu: \nJumlah: \nAlamat: \n\nTerima kasih.',
     coffee: 'Halo Kak Yani, saya tertarik dengan Blind Coffee Specialty.\n\nNama: \nMohon info menu, harga, dan cara pemesanan.\n\nTerima kasih.'
   }
 };
@@ -199,7 +198,7 @@ document.getElementById('a11yReset').addEventListener('click', () => {
 loadPrefs();
 
 // ============================================
-// ARTICLE SYSTEM (membaca file Markdown .md)
+// ARTICLE SYSTEM (data dari Jekyll Collections)
 // ============================================
 const ARTIKEL = { story: [], biz: [] };
 
@@ -216,49 +215,23 @@ function tanggalKeAngka(tanggalStr) {
   return new Date(tanggalStr + 'T00:00:00').getTime() || 0;
 }
 
-// Memisahkan "frontmatter" (judul/tag/tanggal) dari isi tulisan
-function parseFrontmatter(teks) {
-  const hasil = { judul: 'Tanpa Judul', tag: '', tanggal: '', isi: teks };
-  const match = teks.match(/^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/);
-  if (match) {
-    const meta = match[1];
-    hasil.isi = match[2].trim();
-    meta.split('\n').forEach(baris => {
-      const pisah = baris.indexOf(':');
-      if (pisah > -1) {
-        const kunci = baris.slice(0, pisah).trim().toLowerCase();
-        const nilai = baris.slice(pisah + 1).trim();
-        if (kunci === 'judul') hasil.judul = nilai;
-        else if (kunci === 'tag') hasil.tag = nilai;
-        else if (kunci === 'tanggal') hasil.tanggal = nilai;
-      }
-    });
-  }
-  return hasil;
+// Menghapus tag HTML untuk preview dan pencarian
+function stripHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
 }
 
-async function muatSatuArtikel(type, namaFile) {
-  const folder = type === 'story' ? 'artikel/my-story/' : 'artikel/bisnis/';
-  try {
-    const resp = await fetch(folder + namaFile);
-    if (!resp.ok) throw new Error('Gagal memuat ' + namaFile);
-    const teks = await resp.text();
-    const artikel = parseFrontmatter(teks);
-    artikel._file = namaFile;
-    return artikel;
-  } catch (e) {
-    console.warn('Tidak bisa memuat artikel:', namaFile, e);
-    return null;
-  }
-}
-
-async function muatSemuaArtikel(type) {
-  const daftar = type === 'story'
-    ? (typeof DAFTAR_MY_STORY !== 'undefined' ? DAFTAR_MY_STORY : [])
-    : (typeof DAFTAR_BISNIS !== 'undefined' ? DAFTAR_BISNIS : []);
-
-  const hasil = await Promise.all(daftar.map(f => muatSatuArtikel(type, f)));
-  ARTIKEL[type] = hasil.filter(a => a !== null);
+// Memuat artikel dari data yang sudah di-generate Jekyll
+function muatSemuaArtikel(type) {
+  if (typeof ARTIKEL_DATA === 'undefined') return;
+  const data = type === 'story' ? ARTIKEL_DATA.story : ARTIKEL_DATA.biz;
+  ARTIKEL[type] = (data || []).map(a => ({
+    judul: a.judul || 'Tanpa Judul',
+    tag: a.tag || '',
+    tanggal: a.tanggal || '',
+    isi: a.isi || ''
+  }));
   renderArticles(type);
 }
 
@@ -276,7 +249,7 @@ function renderArticles(type, query = '') {
     const q = query.toLowerCase();
     articles = articles.filter(a =>
       a.judul.toLowerCase().includes(q) ||
-      a.isi.toLowerCase().includes(q) ||
+      stripHtml(a.isi).toLowerCase().includes(q) ||
       (a.tag && a.tag.toLowerCase().includes(q))
     );
   }
@@ -299,7 +272,7 @@ function renderArticles(type, query = '') {
         ${a.tag ? `<span class="entry-card-tag">${escapeHtml(a.tag)}</span>` : ''}
       </div>
       <h3>${escapeHtml(a.judul)}</h3>
-      <p class="entry-card-preview">${escapeHtml(a.isi)}</p>
+      <p class="entry-card-preview">${escapeHtml(stripHtml(a.isi))}</p>
       <div class="entry-card-read-more">Baca selengkapnya →</div>
     </button>`).join('');
 
@@ -318,13 +291,9 @@ function openReader(idx, type) {
   if (!a) return;
   document.getElementById('readMeta').textContent = `${formatTanggal(a.tanggal)}${a.tag ? ' · ' + a.tag : ''}`;
   document.getElementById('readTitle').textContent = a.judul;
-  // Render Markdown jadi HTML kalau marked.js tersedia, kalau tidak tampilkan teks biasa
+  // Konten sudah HTML dari Jekyll, langsung render
   const contentEl = document.getElementById('readContent');
-  if (typeof marked !== 'undefined') {
-    contentEl.innerHTML = marked.parse(a.isi);
-  } else {
-    contentEl.textContent = a.isi;
-  }
+  contentEl.innerHTML = a.isi;
   document.getElementById('readSummaryBox').innerHTML = '';
   readModal.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -372,68 +341,6 @@ if (bizSearchEl) {
 }
 
 // ============================================
-// Chatbot
-// ============================================
-const chatbotToggle = document.getElementById('chatbotToggle');
-const chatbotPanel = document.getElementById('chatbotPanel');
-const chatInput = document.getElementById('chatInput');
-const chatMessages = document.getElementById('chatbotMessages');
-
-function toggleChatbot(force) {
-  const open = force !== undefined ? force : !chatbotPanel.classList.contains('open');
-  chatbotPanel.classList.toggle('open', open);
-  chatbotToggle.setAttribute('aria-expanded', open);
-  if (open) chatInput.focus();
-}
-chatbotToggle.addEventListener('click', () => toggleChatbot());
-document.getElementById('chatbotClose').addEventListener('click', () => toggleChatbot(false));
-
-function addChatMsg(text, sender) {
-  const m = document.createElement('div');
-  m.className = 'chat-msg ' + sender;
-  m.textContent = text;
-  chatMessages.appendChild(m);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-const chatKnowledge = {
-  'narasumber': 'Kak Yani sering diundang sebagai narasumber oleh kementerian, dinas, universitas, dan komunitas. Topik: kewirausahaan, branding, AI untuk UMKM. Klik tombol "Undang Saya Bicara" di section Layanan.',
-  'undang': 'Untuk mengundang Kak Yani sebagai narasumber, klik tombol WhatsApp hijau di pojok kanan bawah atau di section Layanan. Template pesan sudah disiapkan tinggal lengkapi detail acara Anda.',
-  'pelatihan': 'Program pelatihan Kak Yani fokus pada pemberdayaan komunitas — kuliner, kelas meracik kopi, branding sosmed, dan AI tools. Sudah melatih 100+ alumni. Cocok untuk program CSR perusahaan. Klik "Mulai Diskusi Program".',
-  'csr': 'Program untuk CSR dapat dikustom: workshop intensif atau mentoring berkala. Yang kami percaya: keterampilan yang membuat seseorang mandiri jauh lebih bernilai daripada bantuan sesaat. Mari diskusi via WhatsApp.',
-  'coffee': 'Blind Coffee Specialty adalah brand kopi yang saya dirikan bersama tiga teman tunanetra. Tersedia untuk coffee catering di meeting, gathering, dan event korporat di Jabodetabek.',
-  'catering': 'Coffee catering kami melayani Jabodetabek, disajikan barista tunanetra yang sudah terlatih. Klik tombol catering untuk dapat penawaran sesuai jumlah peserta acara Anda.',
-  'adventure': 'Blind Coffee Adventure adalah wisata edukasi di mana peserta diajak merasakan dunia tanpa penglihatan selama lima jam. Cocok untuk team building atau program CSR. Tanya detailnya via WhatsApp ya!',
-  'ayam': 'Ayam Geprek Petukangan: ayam geprek, aneka sambal, frozen food, dan catering nasi box. Sambal kami bahkan sudah dibawa pelanggan ke lebih dari 15 negara. Klik tombol pesan WhatsApp.',
-  'harga': 'Harga disesuaikan dengan kebutuhan dan skala acara Anda. Lebih baik kita diskusi langsung via WhatsApp agar penawaran sesuai dengan budget dan ekspektasi Anda.',
-  'lokasi': 'Kak Yani berdomisili di Jakarta Selatan, melayani Jabodetabek untuk catering. Untuk speaking dan pelatihan, tersedia online (seluruh Indonesia) dan offline.',
-  'default': 'Pertanyaan menarik! Untuk jawaban lebih personal, saya sarankan langsung WhatsApp Kak Yani via tombol hijau di pojok kanan bawah ya 💬'
-};
-
-function getResponse(q) {
-  const lower = q.toLowerCase();
-  for (const [k, v] of Object.entries(chatKnowledge)) {
-    if (k !== 'default' && lower.includes(k)) return v;
-  }
-  if (lower.match(/halo|hai|hi/)) return 'Halo! 👋 Senang Anda di sini. Tanyakan apa saja tentang layanan, brand, atau cara kerja sama dengan Kak Yani.';
-  if (lower.match(/terima kasih|makasih|thanks/)) return 'Sama-sama 🙏 Semoga membantu! Jangan ragu tanya hal lain.';
-  return chatKnowledge.default;
-}
-
-function sendChat() {
-  const text = sanitize(chatInput.value, 500);
-  if (!text) return;
-  addChatMsg(text, 'user');
-  chatInput.value = '';
-  setTimeout(() => addChatMsg(getResponse(text), 'bot'), 500);
-}
-document.getElementById('chatSend').addEventListener('click', sendChat);
-chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendChat(); } });
-document.querySelectorAll('.chatbot-suggestion').forEach(btn => {
-  btn.addEventListener('click', () => { chatInput.value = btn.dataset.q; sendChat(); });
-});
-
-// ============================================
 // WhatsApp Buttons
 // ============================================
 document.getElementById('waFloat').addEventListener('click', () => openWA());
@@ -448,7 +355,6 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (readModal.classList.contains('open')) closeReader();
     else if (a11yPanel.classList.contains('open')) { a11yPanel.classList.remove('open'); a11yToggle.setAttribute('aria-expanded', 'false'); }
-    else if (chatbotPanel.classList.contains('open')) toggleChatbot(false);
   }
 });
 
@@ -470,5 +376,5 @@ document.querySelectorAll('section').forEach(s => {
 muatSemuaArtikel('story');
 muatSemuaArtikel('biz');
 
-console.log('%c☕ Kak Yani — Production Build', 'color: #C25E3C; font-size: 16px; font-weight: bold;');
-console.log('Artikel: dibaca dari file Markdown (.md) di folder artikel/');
+console.log('%c☕ Kak Yani — Jekyll Build', 'color: #C25E3C; font-size: 16px; font-weight: bold;');
+console.log('Artikel: diproses oleh Jekyll dari koleksi _my-story/ dan _bisnis/');
