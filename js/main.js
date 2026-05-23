@@ -199,8 +199,10 @@ document.getElementById('a11yReset').addEventListener('click', () => {
 loadPrefs();
 
 // ============================================
-// ARTICLE SYSTEM (membaca dari articles.js)
+// ARTICLE SYSTEM (membaca file Markdown .md)
 // ============================================
+const ARTIKEL = { story: [], biz: [] };
+
 function formatTanggal(tanggalStr) {
   try {
     const d = new Date(tanggalStr + 'T00:00:00');
@@ -214,12 +216,54 @@ function tanggalKeAngka(tanggalStr) {
   return new Date(tanggalStr + 'T00:00:00').getTime() || 0;
 }
 
-function getArticles(type) {
-  if (type === 'story') {
-    return (typeof MY_STORY_ARTICLES !== 'undefined') ? MY_STORY_ARTICLES.slice() : [];
-  } else {
-    return (typeof BUSINESS_ARTICLES !== 'undefined') ? BUSINESS_ARTICLES.slice() : [];
+// Memisahkan "frontmatter" (judul/tag/tanggal) dari isi tulisan
+function parseFrontmatter(teks) {
+  const hasil = { judul: 'Tanpa Judul', tag: '', tanggal: '', isi: teks };
+  const match = teks.match(/^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/);
+  if (match) {
+    const meta = match[1];
+    hasil.isi = match[2].trim();
+    meta.split('\n').forEach(baris => {
+      const pisah = baris.indexOf(':');
+      if (pisah > -1) {
+        const kunci = baris.slice(0, pisah).trim().toLowerCase();
+        const nilai = baris.slice(pisah + 1).trim();
+        if (kunci === 'judul') hasil.judul = nilai;
+        else if (kunci === 'tag') hasil.tag = nilai;
+        else if (kunci === 'tanggal') hasil.tanggal = nilai;
+      }
+    });
   }
+  return hasil;
+}
+
+async function muatSatuArtikel(type, namaFile) {
+  const folder = type === 'story' ? 'artikel/my-story/' : 'artikel/bisnis/';
+  try {
+    const resp = await fetch(folder + namaFile);
+    if (!resp.ok) throw new Error('Gagal memuat ' + namaFile);
+    const teks = await resp.text();
+    const artikel = parseFrontmatter(teks);
+    artikel._file = namaFile;
+    return artikel;
+  } catch (e) {
+    console.warn('Tidak bisa memuat artikel:', namaFile, e);
+    return null;
+  }
+}
+
+async function muatSemuaArtikel(type) {
+  const daftar = type === 'story'
+    ? (typeof DAFTAR_MY_STORY !== 'undefined' ? DAFTAR_MY_STORY : [])
+    : (typeof DAFTAR_BISNIS !== 'undefined' ? DAFTAR_BISNIS : []);
+
+  const hasil = await Promise.all(daftar.map(f => muatSatuArtikel(type, f)));
+  ARTIKEL[type] = hasil.filter(a => a !== null);
+  renderArticles(type);
+}
+
+function getArticles(type) {
+  return ARTIKEL[type] ? ARTIKEL[type].slice() : [];
 }
 
 function renderArticles(type, query = '') {
@@ -274,7 +318,13 @@ function openReader(idx, type) {
   if (!a) return;
   document.getElementById('readMeta').textContent = `${formatTanggal(a.tanggal)}${a.tag ? ' · ' + a.tag : ''}`;
   document.getElementById('readTitle').textContent = a.judul;
-  document.getElementById('readContent').textContent = a.isi;
+  // Render Markdown jadi HTML kalau marked.js tersedia, kalau tidak tampilkan teks biasa
+  const contentEl = document.getElementById('readContent');
+  if (typeof marked !== 'undefined') {
+    contentEl.innerHTML = marked.parse(a.isi);
+  } else {
+    contentEl.textContent = a.isi;
+  }
   document.getElementById('readSummaryBox').innerHTML = '';
   readModal.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -417,8 +467,8 @@ document.querySelectorAll('section').forEach(s => {
 // ============================================
 // INIT
 // ============================================
-renderArticles('story');
-renderArticles('biz');
+muatSemuaArtikel('story');
+muatSemuaArtikel('biz');
 
 console.log('%c☕ Kak Yani — Production Build', 'color: #C25E3C; font-size: 16px; font-weight: bold;');
-console.log('Artikel: dibaca dari articles.js (publik, terbaca semua pengunjung)');
+console.log('Artikel: dibaca dari file Markdown (.md) di folder artikel/');
