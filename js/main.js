@@ -359,22 +359,31 @@ document.addEventListener('keydown', e => {
 });
 
 // ============================================
-// Scroll Reveal
+// INIT — Muat artikel DULU sebelum reveal
+// ============================================
+muatSemuaArtikel('story');
+muatSemuaArtikel('biz');
+
+// ============================================
+// Scroll Reveal (setelah konten ter-render)
 // ============================================
 const observer = new IntersectionObserver(entries => {
   entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
-}, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+}, { threshold: 0.05, rootMargin: '0px 0px -30px 0px' });
 
 document.querySelectorAll('section').forEach(s => {
   s.classList.add('reveal');
   observer.observe(s);
 });
 
-// ============================================
-// INIT
-// ============================================
-muatSemuaArtikel('story');
-muatSemuaArtikel('biz');
+// Fallback: pastikan semua section menjadi visible setelah 2 detik
+// Ini menangani kasus di mana IntersectionObserver tidak terpicu
+setTimeout(() => {
+  document.querySelectorAll('section.reveal:not(.visible)').forEach(s => {
+    s.classList.add('visible');
+  });
+}, 2000);
 
 console.log('%c☕ Kak Yani — Jekyll Build', 'color: #C25E3C; font-size: 16px; font-weight: bold;');
 console.log('Artikel: diproses oleh Jekyll dari koleksi _my-story/ dan _bisnis/');
+
