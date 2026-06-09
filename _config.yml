@@ -9,6 +9,9 @@ description: "Culinary Entrepreneur, Narasumber, dan Pelatih Pemberdayaan"
 url: "https://kakyani.my.id"
 baseurl: ""
 
+# Kontak
+whatsapp: "6287836344456"
+
 # Koleksi artikel
 # Jekyll otomatis membaca semua file .md di folder _my-story/ dan _bisnis/
 collections:

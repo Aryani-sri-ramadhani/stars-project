@@ -1,389 +1,467 @@
 /* ============================================================
-   MAIN.JS — Logika & Interaksi Website Kak Yani
+   MAIN.JS — Logic & Interactions for Kak Yani Website
    ============================================================
-   File ini mengatur semua interaksi: navigasi, aksesibilitas,
-   menampilkan artikel, chatbot, WhatsApp, dan animasi.
+   This file manages all interactions: navigation, accessibility,
+   article display, chatbot, WhatsApp, and animations.
    
-   Untuk menambah TULISAN baru, jangan edit file ini —
-   edit file "articles.js" yang lebih mudah.
+   To add new ARTICLES, don't edit this file —
+   edit the Jekyll collections instead.
    ============================================================ */
 
-// ============================================
-// SECURITY: XSS Protection
-// ============================================
-function escapeHtml(str) {
-  if (typeof str !== 'string') return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
-function sanitize(str, max = 10000) {
-  if (typeof str !== 'string') return '';
-  return str.trim().slice(0, max);
-}
+(function() {
+  'use strict';
 
-// ============================================
-// Konfigurasi WhatsApp
-// ============================================
-const WA = {
-  number: '6287836344456',
-  templates: {
-    default: 'Halo Kak Yani, saya melihat website Anda dan tertarik untuk tahu lebih lanjut.',
-    speaker: 'Halo Kak Yani, saya tertarik mengundang Kak Yani sebagai narasumber.\n\nNama: \nLembaga/Perusahaan: \nAcara: \nTanggal & Lokasi: \nTopik yang diinginkan: \n\nMohon informasi lebih lanjut. Terima kasih.',
-    training: 'Halo Kak Yani, saya tertarik mendiskusikan program pelatihan.\n\nNama: \nLembaga/Perusahaan: \nJabatan: \nTarget peserta: \nTujuan program: \n\nMohon kita atur waktu untuk konsultasi. Terima kasih.',
-    catering: 'Halo Kak Yani, saya ingin memesan coffee catering.\n\nNama: \nAcara: \nTanggal & Lokasi: \nJumlah peserta: \n\nMohon penawarannya. Terima kasih.',
-    coffee: 'Halo Kak Yani, saya tertarik dengan Blind Coffee Specialty.\n\nNama: \nMohon info menu, harga, dan cara pemesanan.\n\nTerima kasih.'
+  // ============================================
+  // SECURITY: XSS Protection
+  // ============================================
+  function escapeHtml(str) {
+    if (typeof str !== 'string') return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   }
-};
-function openWA(template = 'default') {
-  const msg = encodeURIComponent(WA.templates[template] || WA.templates.default);
-  window.open(`https://wa.me/${WA.number}?text=${msg}`, '_blank', 'noopener,noreferrer');
-}
+  function sanitize(str, max) {
+    if (max === undefined) max = 10000;
+    if (typeof str !== 'string') return '';
+    return str.trim().slice(0, max);
+  }
 
-// ============================================
-// Toast
-// ============================================
-const toast = document.getElementById('toast');
-function showToast(msg, type = '') {
-  toast.textContent = msg;
-  toast.className = 'toast show ' + type;
-  setTimeout(() => toast.classList.remove('show'), 3500);
-}
+  function sanitizeHtml(html) {
+    if (typeof html !== 'string') return '';
+    var div = document.createElement('div');
+    div.innerHTML = html;
+    // Remove script tags, event handlers, and dangerous elements
+    div.querySelectorAll('script, iframe, object, embed, form, input, textarea, select, button').forEach(function(el) { el.remove(); });
+    div.querySelectorAll('*').forEach(function(el) {
+      [].slice.call(el.attributes).forEach(function(attr) {
+        if (attr.name.startsWith('on') || attr.value.startsWith('javascript:')) {
+          el.removeAttribute(attr.name);
+        }
+      });
+      if (el.tagName === 'A') el.setAttribute('rel', 'noopener noreferrer');
+    });
+    return div.innerHTML;
+  }
 
-// ============================================
-// Navigation
-// ============================================
-const nav = document.getElementById('nav');
-const navToggle = document.getElementById('navToggle');
-const navMenu = document.getElementById('navMenu');
+  // ============================================
+  // WhatsApp Configuration
+  // ============================================
+  var waNumber = (typeof WA_NUMBER !== 'undefined') ? WA_NUMBER : '6287836344456';
+  var WA = {
+    number: waNumber,
+    templates: {
+      default: 'Halo Kak Yani, saya melihat website Anda dan tertarik untuk tahu lebih lanjut.',
+      speaker: 'Halo Kak Yani, saya tertarik mengundang Kak Yani sebagai narasumber.\n\nNama: \nLembaga/Perusahaan: \nAcara: \nTanggal & Lokasi: \nTopik yang diinginkan: \n\nMohon informasi lebih lanjut. Terima kasih.',
+      training: 'Halo Kak Yani, saya tertarik mendiskusikan program pelatihan.\n\nNama: \nLembaga/Perusahaan: \nJabatan: \nTarget peserta: \nTujuan program: \n\nMohon kita atur waktu untuk konsultasi. Terima kasih.',
+      catering: 'Halo Kak Yani, saya ingin memesan coffee catering.\n\nNama: \nAcara: \nTanggal & Lokasi: \nJumlah peserta: \n\nMohon penawarannya. Terima kasih.',
+      coffee: 'Halo Kak Yani, saya tertarik dengan Blind Coffee Specialty.\n\nNama: \nMohon info menu, harga, dan cara pemesanan.\n\nTerima kasih.'
+    }
+  };
+  function openWA(template) {
+    if (template === undefined) template = 'default';
+    var msg = encodeURIComponent(WA.templates[template] || WA.templates.default);
+    window.open('https://wa.me/' + WA.number + '?text=' + msg, '_blank', 'noopener,noreferrer');
+  }
 
-window.addEventListener('scroll', () => {
-  nav.classList.toggle('scrolled', window.scrollY > 20);
-});
+  // ============================================
+  // Toast
+  // ============================================
+  var toast = document.getElementById('toast');
+  function showToast(msg, type) {
+    if (type === undefined) type = '';
+    toast.textContent = msg;
+    toast.className = 'toast show ' + type;
+    setTimeout(function() { toast.classList.remove('show'); }, 3500);
+  }
 
-navToggle.addEventListener('click', () => {
-  const open = navMenu.classList.toggle('open');
-  navToggle.setAttribute('aria-expanded', open);
-});
+  // ============================================
+  // Navigation
+  // ============================================
+  var nav = document.getElementById('nav');
+  var navToggle = document.getElementById('navToggle');
+  var navMenu = document.getElementById('navMenu');
 
-document.querySelectorAll('.nav-menu a').forEach(link => {
-  link.addEventListener('click', () => {
-    // Tutup menu mobile saat link diklik
-    navMenu.classList.remove('open');
-    navToggle.setAttribute('aria-expanded', 'false');
-  });
-});
+  var sections = document.querySelectorAll('section[id]');
+  var navLinks = document.querySelectorAll('.nav-menu a');
 
-// Handler universal untuk SEMUA anchor link (menu, tombol, logo)
-// Tujuan: tombol Back kembali ke section sebelumnya, bukan keluar website
-document.querySelectorAll('a[href^="#"]').forEach(link => {
-  link.addEventListener('click', (e) => {
-    const href = link.getAttribute('href');
-    if (href && href.length > 1) {
-      e.preventDefault();
-      const target = document.querySelector(href);
-      if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        // Catat ke riwayat browser supaya tombol Back berfungsi benar
-        history.pushState(null, '', href);
-      }
+  // Combined scroll handler with RAF throttle
+  var scrollTicking = false;
+  window.addEventListener('scroll', function() {
+    if (!scrollTicking) {
+      requestAnimationFrame(function() {
+        // Nav styling
+        nav.classList.toggle('scrolled', window.scrollY > 20);
+
+        // Active section tracking
+        var current = '';
+        sections.forEach(function(s) {
+          if (window.scrollY >= s.offsetTop - 120) current = s.id;
+        });
+        navLinks.forEach(function(l) {
+          l.classList.toggle('active', l.getAttribute('href') === '#' + current);
+        });
+
+        scrollTicking = false;
+      });
+      scrollTicking = true;
     }
   });
-});
 
-// Saat tombol Back/Forward browser ditekan, scroll ke section yang sesuai
-window.addEventListener('popstate', () => {
-  const hash = window.location.hash;
-  if (hash && hash.length > 1) {
-    const target = document.querySelector(hash);
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  } else {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-});
-
-const sections = document.querySelectorAll('section[id]');
-const navLinks = document.querySelectorAll('.nav-menu a');
-window.addEventListener('scroll', () => {
-  let current = '';
-  sections.forEach(s => {
-    if (window.scrollY >= s.offsetTop - 120) current = s.id;
+  navToggle.addEventListener('click', function() {
+    var open = navMenu.classList.toggle('open');
+    navToggle.setAttribute('aria-expanded', open);
   });
-  navLinks.forEach(l => {
-    l.classList.toggle('active', l.getAttribute('href') === '#' + current);
+
+  document.querySelectorAll('.nav-menu a').forEach(function(link) {
+    link.addEventListener('click', function() {
+      // Close mobile menu when link is clicked
+      navMenu.classList.remove('open');
+      navToggle.setAttribute('aria-expanded', 'false');
+    });
   });
-});
 
-// ============================================
-// Accessibility Panel
-// ============================================
-const a11yToggle = document.getElementById('a11yToggle');
-const a11yPanel = document.getElementById('a11yPanel');
-
-a11yToggle.addEventListener('click', () => {
-  const open = a11yPanel.classList.toggle('open');
-  a11yToggle.setAttribute('aria-expanded', open);
-});
-
-document.addEventListener('click', e => {
-  if (!a11yPanel.contains(e.target) && !a11yToggle.contains(e.target)) {
-    a11yPanel.classList.remove('open');
-    a11yToggle.setAttribute('aria-expanded', 'false');
-  }
-});
-
-function getPrefs() {
-  try { return JSON.parse(localStorage.getItem('a11y') || '{}'); }
-  catch { return {}; }
-}
-function savePrefs(p) {
-  try { localStorage.setItem('a11y', JSON.stringify(p)); } catch {}
-}
-
-function loadPrefs() {
-  const p = getPrefs();
-  if (p.dys) { document.body.classList.add('mode-dyslexia'); document.getElementById('dysToggle').checked = true; }
-  if (p.contrast) { document.body.classList.add('mode-contrast'); document.getElementById('contrastToggle').checked = true; }
-  if (p.reduced) { document.body.classList.add('mode-reduced'); document.getElementById('motionToggle').checked = true; }
-  if (p.size) {
-    document.documentElement.style.setProperty('--font-scale', p.size);
-    document.querySelectorAll('[data-size]').forEach(b => b.classList.toggle('active', b.dataset.size === String(p.size)));
-  }
-  if (p.line) {
-    document.documentElement.style.setProperty('--line-height', p.line);
-    document.querySelectorAll('[data-line]').forEach(b => b.classList.toggle('active', b.dataset.line === String(p.line)));
-  }
-}
-
-document.getElementById('dysToggle').addEventListener('change', e => {
-  document.body.classList.toggle('mode-dyslexia', e.target.checked);
-  const p = getPrefs(); p.dys = e.target.checked; savePrefs(p);
-});
-document.getElementById('contrastToggle').addEventListener('change', e => {
-  document.body.classList.toggle('mode-contrast', e.target.checked);
-  const p = getPrefs(); p.contrast = e.target.checked; savePrefs(p);
-});
-document.getElementById('motionToggle').addEventListener('change', e => {
-  document.body.classList.toggle('mode-reduced', e.target.checked);
-  const p = getPrefs(); p.reduced = e.target.checked; savePrefs(p);
-});
-document.querySelectorAll('[data-size]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('[data-size]').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const s = parseFloat(btn.dataset.size);
-    document.documentElement.style.setProperty('--font-scale', s);
-    const p = getPrefs(); p.size = s; savePrefs(p);
+  // Universal handler for ALL anchor links (menu, buttons, logo)
+  // Purpose: Back button returns to previous section, not out of website
+  document.querySelectorAll('a[href^="#"]').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      var href = link.getAttribute('href');
+      if (href && href.length > 1) {
+        e.preventDefault();
+        var target = document.querySelector(href);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Record to browser history so Back button works correctly
+          history.pushState(null, '', href);
+        }
+      }
+    });
   });
-});
-document.querySelectorAll('[data-line]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('[data-line]').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const l = parseFloat(btn.dataset.line);
-    document.documentElement.style.setProperty('--line-height', l);
-    const p = getPrefs(); p.line = l; savePrefs(p);
+
+  // When Back/Forward browser button is pressed, scroll to matching section
+  window.addEventListener('popstate', function() {
+    var hash = window.location.hash;
+    if (hash && hash.length > 1) {
+      var target = document.querySelector(hash);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   });
-});
-document.getElementById('a11yReset').addEventListener('click', () => {
-  localStorage.removeItem('a11y');
-  document.body.classList.remove('mode-dyslexia', 'mode-contrast', 'mode-reduced');
-  document.documentElement.style.removeProperty('--font-scale');
-  document.documentElement.style.removeProperty('--line-height');
-  document.getElementById('dysToggle').checked = false;
-  document.getElementById('contrastToggle').checked = false;
-  document.getElementById('motionToggle').checked = false;
-  document.querySelectorAll('[data-size]').forEach(b => b.classList.toggle('active', b.dataset.size === '1'));
-  document.querySelectorAll('[data-line]').forEach(b => b.classList.toggle('active', b.dataset.line === '1.7'));
-  showToast('Pengaturan direset', 'success');
-});
-loadPrefs();
 
-// ============================================
-// ARTICLE SYSTEM (data dari Jekyll Collections)
-// ============================================
-const ARTIKEL = { story: [], biz: [] };
+  // ============================================
+  // Accessibility Panel
+  // ============================================
+  var a11yToggle = document.getElementById('a11yToggle');
+  var a11yPanel = document.getElementById('a11yPanel');
 
-function formatTanggal(tanggalStr) {
-  try {
-    const d = new Date(tanggalStr + 'T00:00:00');
-    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-  } catch {
-    return tanggalStr;
+  a11yToggle.addEventListener('click', function() {
+    var open = a11yPanel.classList.toggle('open');
+    a11yToggle.setAttribute('aria-expanded', open);
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!a11yPanel.contains(e.target) && !a11yToggle.contains(e.target)) {
+      a11yPanel.classList.remove('open');
+      a11yToggle.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  function getPrefs() {
+    try { return JSON.parse(localStorage.getItem('a11y') || '{}'); }
+    catch(e) { return {}; }
   }
-}
-
-function tanggalKeAngka(tanggalStr) {
-  return new Date(tanggalStr + 'T00:00:00').getTime() || 0;
-}
-
-// Menghapus tag HTML untuk preview dan pencarian
-function stripHtml(html) {
-  const tmp = document.createElement('div');
-  tmp.innerHTML = html;
-  return tmp.textContent || tmp.innerText || '';
-}
-
-// Memuat artikel dari data yang sudah di-generate Jekyll
-function muatSemuaArtikel(type) {
-  if (typeof ARTIKEL_DATA === 'undefined') return;
-  const data = type === 'story' ? ARTIKEL_DATA.story : ARTIKEL_DATA.biz;
-  ARTIKEL[type] = (data || []).map(a => ({
-    judul: a.judul || 'Tanpa Judul',
-    tag: a.tag || '',
-    tanggal: a.tanggal || '',
-    isi: a.isi || ''
-  }));
-  renderArticles(type);
-}
-
-function getArticles(type) {
-  return ARTIKEL[type] ? ARTIKEL[type].slice() : [];
-}
-
-function renderArticles(type, query = '') {
-  const container = document.getElementById(type === 'story' ? 'storyEntries' : 'bizEntries');
-  if (!container) return;
-  let articles = getArticles(type);
-  articles = articles.map((a, i) => ({ ...a, _idx: i }));
-
-  if (query) {
-    const q = query.toLowerCase();
-    articles = articles.filter(a =>
-      a.judul.toLowerCase().includes(q) ||
-      stripHtml(a.isi).toLowerCase().includes(q) ||
-      (a.tag && a.tag.toLowerCase().includes(q))
-    );
+  function savePrefs(p) {
+    try { localStorage.setItem('a11y', JSON.stringify(p)); } catch(e) {}
   }
 
-  articles.sort((a, b) => tanggalKeAngka(b.tanggal) - tanggalKeAngka(a.tanggal));
-
-  if (articles.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon" aria-hidden="true">📝</div>
-        <p>${query ? 'Tidak ada tulisan yang cocok dengan pencarian.' : 'Belum ada tulisan di sini.'}</p>
-      </div>`;
-    return;
+  function loadPrefs() {
+    var p = getPrefs();
+    if (p.dys) { document.body.classList.add('mode-dyslexia'); document.getElementById('dysToggle').checked = true; }
+    if (p.contrast) { document.body.classList.add('mode-contrast'); document.getElementById('contrastToggle').checked = true; }
+    if (p.reduced) { document.body.classList.add('mode-reduced'); document.getElementById('motionToggle').checked = true; }
+    if (p.size) {
+      document.documentElement.style.setProperty('--font-scale', p.size);
+      document.querySelectorAll('[data-size]').forEach(function(b) { b.classList.toggle('active', b.dataset.size === String(p.size)); });
+    }
+    if (p.line) {
+      document.documentElement.style.setProperty('--line-height', p.line);
+      document.querySelectorAll('[data-line]').forEach(function(b) { b.classList.toggle('active', b.dataset.line === String(p.line)); });
+    }
   }
 
-  container.innerHTML = articles.map(a => `
-    <button class="entry-card" data-idx="${a._idx}" data-type="${type}" role="listitem">
-      <div class="entry-card-meta">
-        <span>${escapeHtml(formatTanggal(a.tanggal))}</span>
-        ${a.tag ? `<span class="entry-card-tag">${escapeHtml(a.tag)}</span>` : ''}
-      </div>
-      <h3>${escapeHtml(a.judul)}</h3>
-      <p class="entry-card-preview">${escapeHtml(stripHtml(a.isi))}</p>
-      <div class="entry-card-read-more">Baca selengkapnya →</div>
-    </button>`).join('');
-
-  container.querySelectorAll('.entry-card').forEach(c => {
-    c.addEventListener('click', () => openReader(parseInt(c.dataset.idx), c.dataset.type));
+  document.getElementById('dysToggle').addEventListener('change', function(e) {
+    document.body.classList.toggle('mode-dyslexia', e.target.checked);
+    var p = getPrefs(); p.dys = e.target.checked; savePrefs(p);
   });
-}
-
-// ============================================
-// READER (baca artikel penuh)
-// ============================================
-const readModal = document.getElementById('readModal');
-
-function openReader(idx, type) {
-  const a = getArticles(type)[idx];
-  if (!a) return;
-  document.getElementById('readMeta').textContent = `${formatTanggal(a.tanggal)}${a.tag ? ' · ' + a.tag : ''}`;
-  document.getElementById('readTitle').textContent = a.judul;
-  // Konten sudah HTML dari Jekyll, langsung render
-  const contentEl = document.getElementById('readContent');
-  contentEl.innerHTML = a.isi;
-  document.getElementById('readSummaryBox').innerHTML = '';
-  readModal.classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-function closeReader() {
-  readModal.classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-document.getElementById('readClose').addEventListener('click', closeReader);
-readModal.addEventListener('click', e => { if (e.target === readModal) closeReader(); });
-
-document.getElementById('readSummary').addEventListener('click', () => {
-  const content = document.getElementById('readContent').textContent;
-  if (!content) return;
-  const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 10);
-  let summary;
-  if (sentences.length <= 3) summary = sentences.join('. ') + '.';
-  else summary = `${sentences[0]}. ${sentences[Math.floor(sentences.length / 2)]}. ${sentences[sentences.length - 1]}.`;
-
-  document.getElementById('readSummaryBox').innerHTML = `
-    <div class="summary-box">
-      <strong>✦ Ringkasan AI</strong>
-      ${escapeHtml(summary)}
-    </div>`;
-});
-
-// ============================================
-// Search
-// ============================================
-let searchT;
-const storySearchEl = document.getElementById('storySearch');
-const bizSearchEl = document.getElementById('bizSearch');
-if (storySearchEl) {
-  storySearchEl.addEventListener('input', e => {
-    clearTimeout(searchT);
-    searchT = setTimeout(() => renderArticles('story', e.target.value), 200);
+  document.getElementById('contrastToggle').addEventListener('change', function(e) {
+    document.body.classList.toggle('mode-contrast', e.target.checked);
+    var p = getPrefs(); p.contrast = e.target.checked; savePrefs(p);
   });
-}
-if (bizSearchEl) {
-  bizSearchEl.addEventListener('input', e => {
-    clearTimeout(searchT);
-    searchT = setTimeout(() => renderArticles('biz', e.target.value), 200);
+  document.getElementById('motionToggle').addEventListener('change', function(e) {
+    document.body.classList.toggle('mode-reduced', e.target.checked);
+    var p = getPrefs(); p.reduced = e.target.checked; savePrefs(p);
   });
-}
+  document.querySelectorAll('[data-size]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('[data-size]').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var s = parseFloat(btn.dataset.size);
+      document.documentElement.style.setProperty('--font-scale', s);
+      var p = getPrefs(); p.size = s; savePrefs(p);
+    });
+  });
+  document.querySelectorAll('[data-line]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('[data-line]').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var l = parseFloat(btn.dataset.line);
+      document.documentElement.style.setProperty('--line-height', l);
+      var p = getPrefs(); p.line = l; savePrefs(p);
+    });
+  });
+  document.getElementById('a11yReset').addEventListener('click', function() {
+    localStorage.removeItem('a11y');
+    document.body.classList.remove('mode-dyslexia', 'mode-contrast', 'mode-reduced');
+    document.documentElement.style.removeProperty('--font-scale');
+    document.documentElement.style.removeProperty('--line-height');
+    document.getElementById('dysToggle').checked = false;
+    document.getElementById('contrastToggle').checked = false;
+    document.getElementById('motionToggle').checked = false;
+    document.querySelectorAll('[data-size]').forEach(function(b) { b.classList.toggle('active', b.dataset.size === '1'); });
+    document.querySelectorAll('[data-line]').forEach(function(b) { b.classList.toggle('active', b.dataset.line === '1.7'); });
+    showToast('Pengaturan direset', 'success');
+  });
+  loadPrefs();
 
-// ============================================
-// WhatsApp Buttons
-// ============================================
-document.getElementById('waFloat').addEventListener('click', () => openWA());
-document.querySelectorAll('[data-wa]').forEach(btn => {
-  btn.addEventListener('click', () => openWA(btn.dataset.wa));
-});
+  // ============================================
+  // ARTICLE SYSTEM (data from Jekyll Collections)
+  // ============================================
+  var ARTICLES = { story: [], biz: [] };
 
-// ============================================
-// Escape closes modals
-// ============================================
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    if (readModal.classList.contains('open')) closeReader();
-    else if (a11yPanel.classList.contains('open')) { a11yPanel.classList.remove('open'); a11yToggle.setAttribute('aria-expanded', 'false'); }
+  function formatDate(tanggalStr) {
+    try {
+      var d = new Date(tanggalStr + 'T00:00:00');
+      return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    } catch(e) {
+      return tanggalStr;
+    }
   }
-});
 
-// ============================================
-// INIT — Muat artikel DULU sebelum reveal
-// ============================================
-muatSemuaArtikel('story');
-muatSemuaArtikel('biz');
+  function dateToTimestamp(tanggalStr) {
+    return new Date(tanggalStr + 'T00:00:00').getTime() || 0;
+  }
 
-// ============================================
-// Scroll Reveal (setelah konten ter-render)
-// ============================================
-const observer = new IntersectionObserver(entries => {
-  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
-}, { threshold: 0.05, rootMargin: '0px 0px -30px 0px' });
+  // Strip HTML tags for preview and search — with caching
+  var stripHtmlCache = new Map();
+  function stripHtml(html) {
+    if (stripHtmlCache.has(html)) return stripHtmlCache.get(html);
+    var tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    var text = tmp.textContent || tmp.innerText || '';
+    stripHtmlCache.set(html, text);
+    return text;
+  }
 
-document.querySelectorAll('section').forEach(s => {
-  s.classList.add('reveal');
-  observer.observe(s);
-});
+  // Load articles from Jekyll-generated data
+  function loadAllArticles(type) {
+    if (typeof ARTIKEL_DATA === 'undefined') return;
+    var data = type === 'story' ? ARTIKEL_DATA.story : ARTIKEL_DATA.biz;
+    ARTICLES[type] = (data || []).map(function(a) {
+      return {
+        judul: a.judul || 'Tanpa Judul',
+        tag: a.tag || '',
+        tanggal: a.tanggal || '',
+        isi: a.isi || ''
+      };
+    });
+    renderArticles(type);
+  }
 
-// Fallback: pastikan semua section menjadi visible setelah 2 detik
-// Ini menangani kasus di mana IntersectionObserver tidak terpicu
-setTimeout(() => {
-  document.querySelectorAll('section.reveal:not(.visible)').forEach(s => {
-    s.classList.add('visible');
+  function getArticles(type) {
+    return ARTICLES[type] ? ARTICLES[type].slice() : [];
+  }
+
+  function renderArticles(type, query) {
+    if (query === undefined) query = '';
+    var container = document.getElementById(type === 'story' ? 'storyEntries' : 'bizEntries');
+    if (!container) return;
+    var articles = getArticles(type);
+    articles = articles.map(function(a, i) {
+      var copy = {};
+      for (var key in a) { copy[key] = a[key]; }
+      copy._idx = i;
+      return copy;
+    });
+
+    if (query) {
+      var q = query.toLowerCase();
+      articles = articles.filter(function(a) {
+        return a.judul.toLowerCase().indexOf(q) !== -1 ||
+          stripHtml(a.isi).toLowerCase().indexOf(q) !== -1 ||
+          (a.tag && a.tag.toLowerCase().indexOf(q) !== -1);
+      });
+    }
+
+    articles.sort(function(a, b) { return dateToTimestamp(b.tanggal) - dateToTimestamp(a.tanggal); });
+
+    if (articles.length === 0) {
+      container.innerHTML =
+        '<div class="empty-state">' +
+          '<div class="empty-state-icon" aria-hidden="true">📝</div>' +
+          '<p>' + (query ? 'Tidak ada tulisan yang cocok dengan pencarian.' : 'Belum ada tulisan di sini.') + '</p>' +
+        '</div>';
+      return;
+    }
+
+    container.innerHTML = articles.map(function(a) {
+      return '<button class="entry-card" data-idx="' + a._idx + '" data-type="' + type + '" role="listitem">' +
+        '<div class="entry-card-meta">' +
+          '<span>' + escapeHtml(formatDate(a.tanggal)) + '</span>' +
+          (a.tag ? '<span class="entry-card-tag">' + escapeHtml(a.tag) + '</span>' : '') +
+        '</div>' +
+        '<h3>' + escapeHtml(a.judul) + '</h3>' +
+        '<p class="entry-card-preview">' + escapeHtml(stripHtml(a.isi)) + '</p>' +
+        '<div class="entry-card-read-more">Baca selengkapnya →</div>' +
+      '</button>';
+    }).join('');
+
+    container.querySelectorAll('.entry-card').forEach(function(c) {
+      c.addEventListener('click', function() { openReader(parseInt(c.dataset.idx, 10), c.dataset.type); });
+    });
+  }
+
+  // ============================================
+  // FOCUS TRAP for modal accessibility
+  // ============================================
+  function trapFocus(modal) {
+    var focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusable.length === 0) return;
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+
+    modal._trapHandler = function(e) {
+      if (e.key === 'Tab') {
+        if (e.shiftKey) {
+          if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+        } else {
+          if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+      }
+    };
+    modal.addEventListener('keydown', modal._trapHandler);
+    first.focus();
+  }
+
+  function releaseFocus(modal) {
+    if (modal._trapHandler) {
+      modal.removeEventListener('keydown', modal._trapHandler);
+      delete modal._trapHandler;
+    }
+  }
+
+  // ============================================
+  // READER (read full article)
+  // ============================================
+  var readModal = document.getElementById('readModal');
+
+  function openReader(idx, type) {
+    var a = getArticles(type)[idx];
+    if (!a) return;
+    document.getElementById('readMeta').textContent = formatDate(a.tanggal) + (a.tag ? ' · ' + a.tag : '');
+    document.getElementById('readTitle').textContent = a.judul;
+    // Content is HTML from Jekyll, sanitize before rendering
+    var contentEl = document.getElementById('readContent');
+    contentEl.innerHTML = sanitizeHtml(a.isi);
+    document.getElementById('readSummaryBox').innerHTML = '';
+    readModal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    trapFocus(readModal.querySelector('.modal'));
+  }
+  function closeReader() {
+    releaseFocus(readModal.querySelector('.modal'));
+    readModal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  document.getElementById('readClose').addEventListener('click', closeReader);
+  readModal.addEventListener('click', function(e) { if (e.target === readModal) closeReader(); });
+
+  document.getElementById('readSummary').addEventListener('click', function() {
+    var content = document.getElementById('readContent').textContent;
+    if (!content) return;
+    var sentences = content.split(/[.!?]+/).filter(function(s) { return s.trim().length > 10; });
+    var summary;
+    if (sentences.length <= 3) summary = sentences.join('. ') + '.';
+    else summary = sentences[0] + '. ' + sentences[Math.floor(sentences.length / 2)] + '. ' + sentences[sentences.length - 1] + '.';
+
+    document.getElementById('readSummaryBox').innerHTML =
+      '<div class="summary-box">' +
+        '<strong>✦ Ringkasan AI</strong>' +
+        escapeHtml(summary) +
+      '</div>';
   });
-}, 2000);
 
-console.log('%c☕ Kak Yani — Jekyll Build', 'color: #C25E3C; font-size: 16px; font-weight: bold;');
-console.log('Artikel: diproses oleh Jekyll dari koleksi _my-story/ dan _bisnis/');
+  // ============================================
+  // Search (separate debounce timers)
+  // ============================================
+  var storySearchTimer;
+  var bizSearchTimer;
+  var storySearchEl = document.getElementById('storySearch');
+  var bizSearchEl = document.getElementById('bizSearch');
+  if (storySearchEl) {
+    storySearchEl.addEventListener('input', function(e) {
+      clearTimeout(storySearchTimer);
+      storySearchTimer = setTimeout(function() { renderArticles('story', e.target.value); }, 200);
+    });
+  }
+  if (bizSearchEl) {
+    bizSearchEl.addEventListener('input', function(e) {
+      clearTimeout(bizSearchTimer);
+      bizSearchTimer = setTimeout(function() { renderArticles('biz', e.target.value); }, 200);
+    });
+  }
 
+  // ============================================
+  // WhatsApp Buttons
+  // ============================================
+  document.getElementById('waFloat').addEventListener('click', function() { openWA(); });
+  document.querySelectorAll('[data-wa]').forEach(function(btn) {
+    btn.addEventListener('click', function() { openWA(btn.dataset.wa); });
+  });
+
+  // ============================================
+  // Escape closes modals
+  // ============================================
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      if (readModal.classList.contains('open')) closeReader();
+      else if (a11yPanel.classList.contains('open')) { a11yPanel.classList.remove('open'); a11yToggle.setAttribute('aria-expanded', 'false'); }
+    }
+  });
+
+  // ============================================
+  // INIT — Load articles FIRST before reveal
+  // ============================================
+  loadAllArticles('story');
+  loadAllArticles('biz');
+
+  // ============================================
+  // Scroll Reveal (after content is rendered)
+  // ============================================
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.05, rootMargin: '0px 0px -30px 0px' });
+
+  document.querySelectorAll('section').forEach(function(s, i) {
+    s.classList.add('reveal');
+    s.style.setProperty('--reveal-delay', (i * 0.05) + 's');
+    observer.observe(s);
+  });
+
+  // Fallback: ensure all sections become visible after 2 seconds
+  // This handles cases where IntersectionObserver doesn't trigger
+  setTimeout(function() {
+    document.querySelectorAll('section.reveal:not(.visible)').forEach(function(s) {
+      s.classList.add('visible');
+    });
+  }, 2000);
+
+})();

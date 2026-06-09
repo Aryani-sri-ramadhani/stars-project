@@ -58,8 +58,14 @@ layout: null
 </script>
 
 <link rel="stylesheet" href="css/style.css">
+
+<!-- Fallback: konten tetap terlihat jika JavaScript tidak aktif -->
+<noscript>
+  <style>.reveal { opacity: 1 !important; transform: none !important; }</style>
+</noscript>
 </head>
-<body>
+<body class="no-js">
+<script>document.body.classList.remove('no-js');</script>
 
 <a href="#main" class="skip-link">Lewati ke konten utama</a>
 
@@ -608,9 +614,10 @@ layout: null
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<!-- Data artikel dari Jekyll Collections -->
+<!-- Data artikel & konfigurasi dari Jekyll -->
 <script>
-const ARTIKEL_DATA = {
+var WA_NUMBER = {{ site.whatsapp | jsonify }};
+var ARTIKEL_DATA = {
   story: [
     {% for post in site.my-story %}
     {
@@ -633,7 +640,7 @@ const ARTIKEL_DATA = {
   ]
 };
 </script>
-<script src="js/main.js"></script>
+<script src="js/main.js" defer></script>
 
 </body>
 </html>
